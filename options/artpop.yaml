@@ -1,0 +1,36 @@
+yaml: 
+group: final                        # name of dataset group
+name: 0                              # name of dataset run
+seed: 5
+cpu: True
+batch_size: 9                       # number of images to generate
+figsize: [5,5]                        # figsize for output in inches. for pixels, will be figsize*dpi
+dpi: 100
+
+obj_source:                           # SSP options
+    log_age: 8.5                      # log of age in years
+    feh: -1.5                         # metallicity [Fe/H]
+    r_eff_base: 250                   # effective radius
+    n: 0.8                            # Sersic index
+    theta_base: 135                   # position angle
+    ellip: 0.3                        # ellipticity
+    num_stars: 1000000                # number of stars
+    phot_system: 'LSST'               # photometric system
+    distance_base: 4                  # distance to system
+    xy_dim: 501                       # image dimension
+    # pixel_scale: [0.1]       # pixel scale in arcsec / pixel
+    random_state: 129                 # random state for reproducibility
+
+imager:                               # photometric system options
+    phot_system: 'LSST'               # photometric system
+    diameter: 6.4                     # effective aperture diameter
+    # noises: [300]
+
+observe:
+  # fwhms: [1.0]
+  exptime: 15                         # exposure time
+  sky_sb: 40                          # sky surface brightness
+
+# rgb:
+#   stretch: 0.05
+#   Q: [5,8]

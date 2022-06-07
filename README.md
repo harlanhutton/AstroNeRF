@@ -12,6 +12,7 @@ It is recommended use [Anaconda](https://www.anaconda.com/products/individual) t
 ```bash
 conda env create --file requirements.yaml python=3
 conda activate astronerf
+pip install artpop
 ```
 Initialize the external submodule dependencies with
 ```bash
@@ -20,15 +21,23 @@ git submodule update --init --recursive
 
 --------------------------------------
 
-### Dataset
-
---------------------------------------
-
 ### Running the code
 
 - #### ArtPop dataset generation
 
+The options file artpop.yaml contains all of the ArtPop options. For further detail on appropriate values for each option, see ArtPop documentation: https://artpop.readthedocs.io/en/latest/). Additionally, you can decide on the number of images you want to generate, as well as the image size. To generate the dataset, run:
+
+```bash
+python3 generatedata.py --yaml=artpop
+```
+
 - #### Planar image alignment experiment
+
+The options file barfplanar.yaml contains all of the options for the planar alignment experiment. To train the planar alignment experiment, run:
+
+```bash
+python3 train.py --yaml=barfplanar
+```
 
 - #### Visualizing the results
 

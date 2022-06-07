@@ -6,10 +6,10 @@ Code for artificial star cluster dataset generation using ArtPop and planar imag
 ### Prerequisites
 
 This code is developed with Python3 (`python3`). PyTorch 1.9+ is required.  
-It is recommended use [Anaconda](https://www.anaconda.com/products/individual) to set up the environment. Install the dependencies and activate the environment `barf-env` with
+It is recommended use [Anaconda](https://www.anaconda.com/products/individual) to set up the environment. Install the dependencies and activate the environment `astronerf` with
 ```bash
 conda env create --file requirements.yaml python=3
-conda activate barf-env
+conda activate astronerf
 ```
 Initialize the external submodule dependencies with
 ```bash

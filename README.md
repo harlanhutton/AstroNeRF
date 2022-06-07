@@ -12,7 +12,6 @@ It is recommended use [Anaconda](https://www.anaconda.com/products/individual) t
 ```bash
 conda env create --file requirements.yaml python=3
 conda activate astronerf
-pip install artpop
 ```
 Initialize the external submodule dependencies with
 ```bash

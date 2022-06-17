@@ -136,7 +136,7 @@ class Model():
           image_tensor = torchvision_F.to_tensor(image_pil.convert("RGB"))
           img_dict['img{}'.format(i)] = image_tensor
         self.image_total = torch.stack(list(img_dict.values()))
-        image_raw_batch = self.image_total
+        image_raw_batch = self.image_total.to(opt.device)
         image_pert_all = torch_F.grid_sample(image_raw_batch,xy_grid_warped,align_corners=False)
         return warp_pert_all,image_pert_all
 

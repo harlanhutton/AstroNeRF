@@ -1,10 +1,11 @@
 yaml: 
-group: final                        # name of dataset group
+group: summer                        # name of dataset group
 name: 0                              # name of dataset run
-seed: 5
-cpu: True
+seed: 0
+cpu: False
+gpu: 0
 batch_size: 9                       # number of images to generate
-figsize: [5,5]                        # figsize for output in inches. for pixels, will be figsize*dpi
+figsize: [8,8]                        # figsize for output in inches. for pixels, will be figsize*dpi
 dpi: 100
 
 obj_source:                           # SSP options
@@ -19,7 +20,7 @@ obj_source:                           # SSP options
     distance_base: 4                  # distance to system
     xy_dim: 501                       # image dimension
     # pixel_scale: [0.1]       # pixel scale in arcsec / pixel
-    random_state: 129                 # random state for reproducibility
+    random_state: 123                 # random state for reproducibility
 
 imager:                               # photometric system options
     phot_system: 'LSST'               # photometric system

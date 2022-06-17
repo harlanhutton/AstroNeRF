@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.visualization import make_lupton_rgb
+import sys
+#sys.path.append('/mnt/home/hhutton/miniconda3/envs/barf-env/lib/python3.9/site-packages/')
 import artpop
 import os
 import random

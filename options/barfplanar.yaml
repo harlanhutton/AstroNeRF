@@ -2,7 +2,8 @@ group: final                                          # name of experiment group
 name: 0                                                # name of experiment run
 seed: 5                                                     # seed number (for both numpy and pytorch)
 yaml: 
-cpu: True
+cpu: False
+gpu: 0
 
 data:                                                       # data options
     root:                                                   # root path to dataset
@@ -11,15 +12,15 @@ data:                                                       # data options
     patch_crop: [300,300]
 
 optim:                                                      # optimization options
-    lr: 1.e-2                                               # learning rate (main)
-    lr_warp: 1.e-2                                        # learning rate of warp parameters
+    lr: 1.e-1                                               # learning rate (main)
+    lr_warp: 1.e-1                                        # learning rate of warp parameters
     algo: Adam                                              # optimizer (see PyTorch doc)                                         
     sched:                                                  # learning rate scheduling options
         type: StepLR                                  # scheduler (see PyTorch doc)
-        # total_steps: 5000                                 # decay every N epochs
-        # max_lr: 0.1
-        # type: StepLR                                        # scheduler (see PyTorch doc)
-        step_size: 1000
+        total_steps: 5000                                 # decay every N epochs
+        max_lr: 0.1
+        type: StepLR                                        # scheduler (see PyTorch doc)
+        step_size: 2000
         gamma: 0.1
 
 output_root:                                          # root path for output files (checkpoints and results)

@@ -155,17 +155,6 @@ def save_checkpoint(opt,model,ep,it,latest=False,children=None):
         shutil.copy("{0}/model.ckpt".format(opt.output_path),
                     "{0}/model/{1}.ckpt".format(opt.output_path,ep or it)) # if ep is None, track it instead
 
-def check_socket_open(hostname,port):
-    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    is_open = False
-    try:
-        s.bind((hostname,port))
-    except socket.error:
-        is_open = True
-    finally:
-        s.close()
-    return is_open
-
 def get_layer_dims(layers):
     # return a list of tuples (k_in,k_out)
     return list(zip(layers[:-1],layers[1:]))

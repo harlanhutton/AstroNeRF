@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
+import os,time
 import PIL
 import PIL.Image,PIL.ImageDraw
 import torch
@@ -8,9 +8,11 @@ from easydict import EasyDict as edict
 import tqdm
 import numpy as np
 import torch.nn.functional as torch_F
-import util
-import warpnew as warp
 import imageio
+import random
+import util
+from util import log
+import warp
 
 
 class Model():
@@ -18,42 +20,19 @@ class Model():
         super().__init__()
 
   def load_data(self,opt):
-    #img_path = "/mnt/home/hhutton/barfplanar/runs/summer/0_seed3/data/images/"
-    img_path = "/mnt/home/hhutton/barfplanar/runs/glacier/0_seed1/data/images/"
-    img_list = os.listdir(img_path)
-    img_dict = {}
-    for x in range(1,len(img_list)+1):
-      img = PIL.Image.open(img_path+'img{}.png'.format(x)).convert('RGB')
-      #img = np.array(img)
-      #img[:,:,:] = np.maximum(0, np.minimum(1, img.mean(axis=2) / 256))[:,:,None]*256
-      # print(img)
-      #img = PIL.Image.fromarray(img)
-      #print('DIVIDE BY 4')
-      #new_width  = img.size[0]//4
-      #new_height = img.size[1]//4
-      new_width  = img.size[0]
-      new_height = img.size[1]
-      if new_width%2!=0:
-          new_width-=1
-      if new_height%2 !=0:
-          new_height-=1
-      img = img.resize((new_width, new_height), PIL.Image.ANTIALIAS)
-      img_dict["img{0}".format(x)] = torchvision_F.to_tensor(img).to(opt.device)
-      print('image shape: ',img_dict["img{0}".format(x)].shape)
-    self.img_dict = img_dict
+    img_list = os.listdir(opt.data_path+'/images/')
+    opt.batch_size = len(img_list)
+    self.img_dict = {}
+
+    for x in range(len(img_list)):
+        raw_img = PIL.Image.open(opt.data_path+'/images/'+img_list[x])
+        self.img_dict["img{0}".format(x)] = torchvision_F.to_tensor(raw_img).to(opt.device)
+    self.image_total = torch.stack(list(self.img_dict.values()))
 
   def build_networks(self,opt):
-    print("building networks...")
     self.graph = Graph(opt).to(opt.device)
-    #self.graph.warp_param = torch.nn.Embedding(opt.batch_size,opt.warp.dof).to(opt.device)
-    #torch.nn.init.zeros_(self.graph.warp_param.weight)
 
   def setup_optimizer(self,opt):
-    print("setting up optimizers...")
-    # optim_list = [
-    #       dict(params=self.graph.neural_image.parameters(),lr=opt.optim.lr),
-    #       dict(params=self.graph.warp_param.parameters(),lr=opt.optim.lr_warp)
-    #   ]
     optim_list = [
           dict(params=self.graph.neural_image.parameters(),lr=opt.optim.lr)
       ]
@@ -65,70 +44,74 @@ class Model():
             kwargs = { k:v for k,v in opt.optim.sched.items() if k!="type" }
             self.sched = scheduler(self.optim,**kwargs)
 
+  def summarize_loss(self,opt,loss):
+    loss_all = 0.
+    assert("all" not in loss)
+    # weigh losses
+    for key in loss:
+        assert(key in opt.loss_weight)
+        assert(loss[key].shape==())
+        if opt.loss_weight[key] is not None:
+            assert not torch.isinf(loss[key]),"loss {} is Inf".format(key)
+            assert not torch.isnan(loss[key]),"loss {} is NaN".format(key)
+            loss_all += 10**float(opt.loss_weight[key])*loss[key]
+    loss.update(all=loss_all)
+    return loss
+
   def train_iteration(self,opt,var,loader):
+    # before train iteration
+    self.timer.it_start = time.time()
+    # train iteration
     self.optim.zero_grad()
-    for idx,img in enumerate(self.img_dict.keys()):
-        _,opt.H,opt.W = self.img_dict[img].shape
-        var[img] = self.graph.forward(opt,var[img],idx)
-        var[img]['image_pert'] = self.img_dict[img]
-        loss = self.graph.compute_loss(opt,var[img])
-        loss.render.backward()
+    var.rgb = self.graph.forward(opt)
+    loss = self.graph.compute_loss(opt,var)
+    loss = self.summarize_loss(opt,loss)
+    loss.all.backward()
     self.optim.step()
     if opt.optim.sched:
       self.sched.step()
-    self.it+=1
-    loader.set_postfix(it=self.it,loss="{:.3f}".format(loss.render))
+    self.timer.it_end = time.time()
+    self.it += 1
+    self.timer.it_end = time.time()
+    loader.set_postfix(it=self.it,loss="{:.3f}".format(loss.all))
+    lr = self.sched.get_last_lr()[0] if opt.optim.sched else opt.optim.lr
+    util.update_timer(opt,self.timer,self.it)
+    log.loss_train(opt,self.it,lr,loss.all,self.timer)
     self.graph.neural_image.progress.data.fill_(self.it/opt.max_iter)
-    return loss
-
+ 
   def train(self,opt):
     # before training
-    print("TRAINING START")
+    self.timer = edict(start=time.time(),it_mean=None)
     self.ep = self.it = self.vis_it = 0
-    var = edict()
-    for img in self.img_dict.keys():
-      var[img] = {}
     self.graph.train()
+    var = edict(idx=torch.arange(opt.batch_size))
+    var.images = self.image_total
     # train
-    #var = util.move_to_device(var,opt.device)
+    var = util.move_to_device(var,opt.device)
     loader = tqdm.trange(opt.max_iter,desc="training",leave=False)
-    for it in loader:
+    var.rgb = self.graph.forward(opt)
+    for _ in loader:
       # train iteration
-      loss = self.train_iteration(opt,var,loader)
-    print("TRAINING DONE")
+      self.train_iteration(opt,var,loader)
 
   def predict_entire_image(self,opt):
-    #xy_grid = warp.get_normalized_pixel_grid(opt)[:1]
-    #opt.H, opt.W = 2000, 3000
-    xy_grid = warp.get_normalized_pixel_grid(opt)
-    print('xy_grid: ',xy_grid.shape)
-    rgb = self.graph.neural_image.forward(opt,xy_grid) #[HW,3]
-    print('rgb shape: ', rgb)
-    #image = rgb.view(self.H,self.W,3).detach().cpu().numpy()
+    xy_grid = warp.get_normalized_pixel_grid(opt)[:1]
+    rgb = self.graph.neural_image.forward(opt,xy_grid) # [B,HW,3]
     image = rgb.view(opt.H,opt.W,3).detach().cpu().permute(2,0,1).permute(1,2,0).numpy()
-    #image = rgb.view(opt.H,opt.W,1).detach().cpu().permute(2,0,1).permute(1,2,0).numpy()
     destination = opt.output_path+'/pred.png'
     imageio.imwrite(destination, im=image)
 
 
 class Graph(torch.nn.Module):
+
     def __init__(self,opt):
         super().__init__()
         self.neural_image = NeuralImageFunction(opt)
 
-    def forward(self,opt,var,idx):
+    def forward(self,opt):
         xy_grid = warp.get_normalized_pixel_grid(opt)
-        #xy_grid_warped = warp.warp_grid(opt,xy_grid,self.warp_param.weight[idx])
-        #print(xy_grid_warped.shape)
-        # render images
-        var.rgb = self.neural_image.forward(opt,xy_grid) # [HW,3]
-        # for i in range(len(var.rgb_warped)):
-        #   for j in range(len(var.rgb_warped[i])):
-        #     var.rgb_warped[i,j] = np.maximum(0, np.minimum(1, var.rgb_warped.detach().cpu().numpy()[i,j].mean()))
-        # print('rgb_warped:',var.rgb_warped)
-        # var.rgb_warped = var.rgb_warped.to(opt.device)
-        #var.rgb_warped_map = var.rgb_warped.view(opt.H_crop,opt.W_crop,3).permute(2,0,1) # [3,H,W]
-        return var
+        rgb = self.neural_image.forward(opt,xy_grid) # [B,HW,3]
+        return rgb
 
     def l1_loss(self,pred,label=0):
         loss = (pred.contiguous()-label).abs()
@@ -140,13 +123,11 @@ class Graph(torch.nn.Module):
 
     def compute_loss(self,opt,var):
         loss = edict()
-        print('image pert: ',var.image_pert.shape)
-        image_pert = var.image_pert.view(3,opt.H*opt.W).permute(1,0)
-        #image_pert = var.image_pert.view(1,opt.H*opt.W).permute(1,0)
+        images = var.images.view(opt.batch_size,3,opt.H*opt.W).permute(0,2,1)
         if opt.loss_type == 'mse':
-          loss.render = self.MSE_loss(var.rgb,image_pert)
+          loss.render = self.MSE_loss(var.rgb,images)
         elif opt.loss_type == 'l1':
-          loss.render = self.l1_loss(var.rgb,image_pert)
+          loss.render = self.l1_loss(var.rgb,images)
         return loss
 
 
@@ -161,7 +142,6 @@ class NeuralImageFunction(torch.nn.Module):
         input_2D_dim = 2+4*opt.arch.posenc.L_2D if opt.arch.posenc else 2
         # point-wise RGB prediction
         self.mlp = torch.nn.ModuleList() 
-        #L = get_layer_dims(self.layers)
         L = util.get_layer_dims(opt.arch.layers)
         for li,(k_in,k_out) in enumerate(L):
             if li==0: k_in = input_2D_dim
@@ -180,7 +160,7 @@ class NeuralImageFunction(torch.nn.Module):
             points_enc = torch.cat([coord_2D,points_enc],dim=-1) # [B,...,6L+3]
         else: points_enc = coord_2D
         feat = points_enc
-        print(feat.shape)
+        print('feat: ', feat.shape)
         # extract implicit features
         for li,layer in enumerate(self.mlp):
             if li in opt.arch.skip: feat = torch.cat([feat,points_enc],dim=-1)

@@ -38,6 +38,8 @@ class Model():
         self.img_dict["img{0}".format(x)] = torchvision_F.to_tensor(self.img_dict["img{0}".format(x)]).to(opt.device)
 
     self.image_total = torch.stack(list(self.img_dict.values()))
+    print(self.image_total.shape)
+    #self.image_total = torch.cat(list(self.img_dict.values()),dim=0)
 
   def build_networks(self,opt):
     print("building networks...")
@@ -122,12 +124,6 @@ class Model():
             bbox = (avg_x+rand_loc,avg_y+rand_loc,avg_x+rand_loc+shape_size,avg_y+rand_loc+shape_size)
             draw.rectangle(bbox,fill=tuple(np.append(self.box_colors[i],opacity)))
           elif shape == 'polygon':
-            # bbox = (avg_x+rand_loc,avg_y+rand_loc,
-            #         avg_x+rand_loc+shape_size,avg_y+rand_loc+shape_size,
-            #         avg_x+shape_size,avg_y-shape_size)
-            # bbox = (avg_x+rand_loc,avg_y+rand_loc,
-            #         avg_x+2*rand_loc+shape_size,avg_y+rand_loc+rand_loc+shape_size,
-            #         avg_x-2*rand_loc-shape_size,avg_y-2*rand_loc-shape_size)
             bbox = (avg_x,avg_y+rand_loc,
                     avg_x,avg_y+rand_loc+shape_size,
                     avg_x-shape_size,avg_y+rand_loc+shape_size)
@@ -164,6 +160,8 @@ class Model():
     self.graph.neural_image.progress.data.fill_(self.it/opt.max_iter)
     return loss
 
+    
+
   def train(self,opt,file):
     # before training
     print("TRAINING START")
@@ -181,53 +179,13 @@ class Model():
     for it in loader:
       # train iteration
       loss = self.train_iteration(opt,var,loader)
+      print('VAR rgb warped: ', var.rgb_warped.shape)
+      print('var rgb warped map: ', var.rgb_warped_map.shape)
+      print('var image pert: ', var.image_pert.shape)
       if opt.warp.fix_first:
         self.graph.warp_param.weight.data[0] = 0
     print("TRAINING DONE")
     file.write("time:{}".format(util.blue("{0}-{1:02d}:{2:02d}:{3:02d}".format(*util.get_time(self.timer.elapsed)),bold=True)))
-
-
-  # def add_obstructions(self,opt,warp_param):
-  #   crops, corners_all = self.visualize_patches(opt,warp_param)
-  #   transparency = 0.5 # Degree of transparency, 0-100%
-  #   opacity = int(255 * transparency)
-  #   img_dict = {}
-
-  #   for i in range(opt.batch_size):
-  #     this_im = crops[i]
-  #     image_pil = torchvision_F.to_pil_image(this_im).convert("RGBA")
-  #     draw_pil = PIL.Image.new("RGBA",image_pil.size,(0,0,0,0))
-  #     draw = PIL.ImageDraw.Draw(draw_pil)
-  #     avg_x = torch.mean(corners_all[i][:,0]).cpu().numpy()
-  #     avg_y = torch.mean(corners_all[i][:,1]).cpu().numpy()
-  #     shape = random.choice(['ellipse','rectangle','polygon'])
-  #     shape_size  = random.randint(10,20) # random size
-  #     rand_loc = random.choice([-1,1])*np.random.randint(0,opt.W_crop//2-shape_size) # location in crop
-
-  #     if shape == 'ellipse':
-  #       stretch = random.randint(1,20) # random stretch
-  #       bbox = (avg_x+rand_loc,avg_y+rand_loc,avg_x+rand_loc+shape_size,avg_y+rand_loc+shape_size+stretch) # coords
-  #       draw.ellipse(bbox,fill=tuple(np.append(self.box_colors[i],opacity)))
-  #     elif shape == 'rectangle':
-  #       bbox = (avg_x+rand_loc,avg_y+rand_loc,avg_x+rand_loc+shape_size,avg_y+rand_loc+shape_size)
-  #       draw.rectangle(bbox,fill=tuple(np.append(self.box_colors[i],opacity)))
-  #     # elif shape == 'polygon':
-  #     #   bbox = (avg_x+rand_loc,avg_y+rand_loc,
-  #     #           avg_x+rand_loc+shape_size,avg_y+rand_loc+shape_size,
-  #     #           avg_x+shape_size,avg_y-shape_size-rand_loc)
-  #     elif shape == 'polygon':
-  #       bbox = (avg_x+rand_loc,avg_y+rand_loc,
-  #               avg_x-rand_loc-shape_size,avg_y-rand_loc-shape_size,
-  #               avg_x+shape_size,avg_y+shape_size+rand_loc)
-  #       draw.polygon(bbox,fill=tuple(np.append(self.box_colors[i],opacity)))
-      
-  #     image_pil.alpha_composite(draw_pil)
-  #     image_tensor = torchvision_F.to_tensor(image_pil.convert("RGB"))
-  #     img_dict['img{}'.format(i)] = image_tensor
-
-  #   total = torch.stack(list(img_dict.values()))
-  #   self.image_total = total
-  #   return total
 
 
   def visualize_patches(self,opt,warp_param):
@@ -309,15 +267,15 @@ class Model():
     final_pred = rgb.view(3,opt.H,opt.W)
     loss = edict()
     #print(self.graph.MSE_loss(final_pred,self.gt_tnsr))
-    loss.render = self.graph.MSE_loss(final_pred,self.gt_tnsr)
-    final_psnr = -10*loss.render.log10().item()
-    print('FINAL PSNR - GROUND TRUTH COMPARED TO FINAL PRED: {}'.format(final_psnr))
-    log.loss(loss.render)
+    #loss.render = self.graph.MSE_loss(final_pred,self.gt_tnsr)
+    #final_psnr = -10*loss.render.log10().item()
+    #print('FINAL PSNR - GROUND TRUTH COMPARED TO FINAL PRED: {}'.format(final_psnr))
+    #log.loss(loss.render)
     destination = opt.output_path+'/pred.png'
     imageio.imwrite(destination, im=image)
-    file.write("final pred loss compared to gt: {}".format(loss))
-    file.write("final psnr: {}".format(final_psnr))
-    file.close()
+    #file.write("final pred loss compared to gt: {}".format(loss))
+    #file.write("final psnr: {}".format(final_psnr))
+    #file.close()
 
 
 
@@ -330,6 +288,7 @@ class Graph(torch.nn.Module):
     def forward(self,opt,var):
         xy_grid = warp.get_normalized_pixel_grid_crop(opt)
         xy_grid_warped = warp.warp_grid(opt,xy_grid,self.warp_param.weight)
+        print(xy_grid_warped.shape)
         # render images
         var.rgb_warped = self.neural_image.forward(opt,xy_grid_warped) # [B,HW,3]
         var.rgb_warped_map = var.rgb_warped.view(opt.batch_size,opt.H_crop,opt.W_crop,3).permute(0,3,1,2) # [B,3,H,W]
@@ -384,6 +343,7 @@ class NeuralImageFunction(torch.nn.Module):
             points_enc = torch.cat([coord_2D,points_enc],dim=-1) # [B,...,6L+3]
         else: points_enc = coord_2D
         feat = points_enc
+        print('feat: ', feat.shape)
         # extract implicit features
         for li,layer in enumerate(self.mlp):
             if li in opt.arch.skip: feat = torch.cat([feat,points_enc],dim=-1)

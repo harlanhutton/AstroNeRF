@@ -4,8 +4,6 @@ import torch
 import random
 import string
 import yaml
-import sys
-#sys.path.append('/mnt/home/hhutton/miniconda3/envs/barf-env/lib/python3.9/site-packages/')
 from easydict import EasyDict as edict
 
 import util
@@ -94,7 +92,9 @@ def process_options(opt):
         opt.output_path = "runs/{0}/{1}".format(opt.group,opt.name)
         opt.output_path = uniquify(opt.output_path,'train')
         os.makedirs(opt.output_path,exist_ok=True)
-    opt.device = "cpu" if opt.cpu or not torch.cuda.is_available() else "cuda:{}".format(opt.gpu)
+    #opt.device = "cpu" if opt.cpu or not torch.cuda.is_available() else "cuda:{}".format(opt.gpu)
+    opt.device = "cpu" if opt.cpu or not torch.cuda.is_available() else "cuda"
+    print(opt.device)
 
 
 def save_options_file(opt):

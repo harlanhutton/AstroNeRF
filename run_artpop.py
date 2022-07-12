@@ -11,7 +11,8 @@ import random
 class ArtPopGenerator():
     def __init__(self,opt):
         super().__init__()
-        self.img_path = "{}/images".format(opt.data_path)
+        self.img_path = "{}/images".form
+        at(opt.data_path)
         os.makedirs(self.img_path,exist_ok=True)
 
     def source(self,opt,seed):

@@ -1,27 +1,26 @@
-group: final                                          # name of experiment group
+group: planet                                         # name of experiment group
 name: 0                                                # name of experiment run
-seed: 5                                                     # seed number (for both numpy and pytorch)
+seed: 3                                                     # seed number (for both numpy and pytorch)
 yaml: 
 cpu: False
 gpu: 0
 
 data:                                                       # data options
     root:                                                   # root path to dataset
-    dataset:                                                # dataset name
-    image_size: [500,500]                                   # original image size
-    patch_crop: [300,300]
+    dataset:                                           # dataset name
+    image_size: [338,600]                                   # original image size
+    patch_crop: [250,500]
 
 optim:                                                      # optimization options
-    lr: 1.e-1                                               # learning rate (main)
-    lr_warp: 1.e-1                                        # learning rate of warp parameters
+    lr: 1.e-4                                              # learning rate (main)
+    lr_warp: 1.e-4                                      # learning rate of warp parameters
     algo: Adam                                              # optimizer (see PyTorch doc)                                         
     sched:                                                  # learning rate scheduling options
-        type: StepLR                                  # scheduler (see PyTorch doc)
-        total_steps: 5000                                 # decay every N epochs
-        max_lr: 0.1
-        type: StepLR                                        # scheduler (see PyTorch doc)
-        step_size: 2000
-        gamma: 0.1
+        #type: StepLR                                  # scheduler (see PyTorch doc)                             # decay every N epochs
+        #max_lr: 0.1
+        #type: StepLR                                        # scheduler (see PyTorch doc)
+        #step_size: 1000
+        #gamma: 0.1
 
 output_root:                                          # root path for output files (checkpoints and results)
 
@@ -34,7 +33,7 @@ arch:                                                       # architectural opti
     posenc:                                                 # positional encoding
         L_2D: 8                                             # number of bases (3D point)
 
-barf_c2f:                                                   # coarse-to-fine scheduling on positional encoding
+barf_c2f: [0.1,0.5]                                                  # coarse-to-fine scheduling on positional encoding
 
 warp:  
     dof: 8                                                  # image warping options

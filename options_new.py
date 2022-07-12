@@ -43,9 +43,6 @@ def set(opt_cmd={}):
     opt = override_options(opt_base,opt_cmd,key_stack=[],safe_check=True)
     process_options(opt)
     log.options(opt)
-    if opt_cmd.yaml == 'barfplanar':
-        opt.H,opt.W = opt.data.image_size
-        opt.H_crop,opt.W_crop = opt.data.patch_crop
     return opt
 
 def load_options(fname):

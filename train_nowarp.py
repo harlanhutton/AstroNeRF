@@ -2,7 +2,7 @@ import importlib
 import os,sys
 import torch
 import importlib
-import options
+import options_new as options
 from util import log, uniquify
 import warnings
 
@@ -17,29 +17,24 @@ def main():
     opt = options.set(opt_cmd=opt_cmd)
     options.save_options_file(opt)
 
-    print(opt.device)
     if opt.device == 'cuda':
-        print('its cuda')
         with torch.cuda.device(opt.device):
             print('with cuda')
-            model = importlib.import_module("barfplanar")
-            file = model.File(opt)
+            model = importlib.import_module("barfplanarnowarp")
             m = model.Model(opt)
             m.load_data(opt)
             m.build_networks(opt)
             m.setup_optimizer(opt)
-            m.train(opt,file)
-            m.predict_entire_image(opt,file)
+            m.train(opt)
+            m.predict_entire_image(opt)
     else:
-        print('not cuda')
-        model = importlib.import_module("barfplanar")
-        file = model.File(opt)
+        model = importlib.import_module("barfplanar_new")
         m = model.Model(opt)
         m.load_data(opt)
         m.build_networks(opt)
         m.setup_optimizer(opt)
-        m.train(opt,file)
-        m.predict_entire_image(opt,file)
+        m.train(opt)
+        m.predict_entire_image(opt)
 
 
 if __name__=="__main__":

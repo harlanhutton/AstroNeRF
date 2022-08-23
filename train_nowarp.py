@@ -25,6 +25,7 @@ def main():
             m.load_data(opt)
             m.build_networks(opt)
             m.setup_optimizer(opt)
+            m.setup_visualizer(opt)
             m.train(opt)
             m.predict_entire_image(opt)
     else:

@@ -1,16 +1,14 @@
-group: glacier                                         # name of experiment group
+group: fire                                         # name of experiment group
 name: 0                                                # name of experiment run
-seed: 1                                                     # seed number (for both numpy and pytorch)
+seed: 2                                                     # seed number (for both numpy and pytorch)
 yaml: 
 cpu: False
 gpu: 0
 
-H: 338
-W: 600
-
-optim:                                                      # optimization options
-    lr: 1.e-3                                             # learning rate (main)
-    lr_warp: 1.e-3                                     # learning rate of warp parameters
+optim:  
+    weight_decay:                                 # optimization options
+    lr: 1.e-2                                             # learning rate (main)
+    lr_warp: 1.e-2                                     # learning rate of warp parameters
     algo: Adam                                              # optimizer (see PyTorch doc)                                         
     sched:                                                  # learning rate scheduling options
     #     type: StepLR                                        # scheduler (see PyTorch doc)
@@ -25,11 +23,13 @@ arch:                                                       # architectural opti
     posenc:                                                 # positional encoding
         L_2D: 8                                             # number of bases (3D point)
 
-barf_c2f: [0.1,0.5]                                                  # coarse-to-fine scheduling on positional encoding
+barf_c2f: [0.1,0.5]                                               # coarse-to-fine scheduling on positional encoding
 
 loss_weight:                                                # loss weights (in log scale)
     render: 0                                               # RGB rendering loss
 
-batch_size: 7                                               # batch size (set to number of images in dataset)
-max_iter: 50000                                           # train to maximum number of iterations
-loss_type: mse                                              # 'mse' or 'l1'
+vis_freq: 200
+
+batch_size: 4                                               # batch size (set to number of images in dataset)
+max_iter: 10000                                           # train to maximum number of iterations
+loss_type: l1                                              # 'mse' or 'l1'

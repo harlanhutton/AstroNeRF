@@ -25,8 +25,11 @@ class Model():
     self.img_dict = {}
 
     for x in range(len(img_list)):
-        raw_img = PIL.Image.open(opt.data_path+'/images/'+img_list[x])
+        raw_img = PIL.Image.open(opt.data_path+'/images/'+img_list[x]).convert('RGB')
+        if x==0:
+          opt.W, opt.H = raw_img.size
         self.img_dict["img{0}".format(x)] = torchvision_F.to_tensor(raw_img).to(opt.device)
+        print(self.img_dict["img{0}".format(x)].shape)
     self.image_total = torch.stack(list(self.img_dict.values()))
 
   def build_networks(self,opt):
@@ -37,8 +40,10 @@ class Model():
           dict(params=self.graph.neural_image.parameters(),lr=opt.optim.lr)
       ]
     optimizer = getattr(torch.optim,opt.optim.algo)
-    #self.optim = optimizer(optim_list,weight_decay=1e-8)
-    self.optim = optimizer(optim_list)
+    if opt.optim.weight_decay:
+      self.optim = optimizer(optim_list,weight_decay=opt.optim.weight_decay)
+    else:
+      self.optim = optimizer(optim_list)
     if opt.optim.sched:
             scheduler = getattr(torch.optim.lr_scheduler,opt.optim.sched.type)
             kwargs = { k:v for k,v in opt.optim.sched.items() if k!="type" }
@@ -57,6 +62,11 @@ class Model():
             loss_all += 10**float(opt.loss_weight[key])*loss[key]
     loss.update(all=loss_all)
     return loss
+  
+  def setup_visualizer(self,opt):
+    self.vis_path = "{}/vis".format(opt.output_path)
+    os.makedirs(self.vis_path,exist_ok=True)
+    self.video_fname = "{}/vis.mp4".format(opt.output_path)
 
   def train_iteration(self,opt,var,loader):
     # before train iteration
@@ -78,11 +88,14 @@ class Model():
     util.update_timer(opt,self.timer,self.it)
     log.loss_train(opt,self.it,lr,loss.all,self.timer)
     self.graph.neural_image.progress.data.fill_(self.it/opt.max_iter)
+    if self.it%opt.vis_freq==0:
+      self.predict_entire_image(opt)
+      self.vis_it+=1
  
   def train(self,opt):
     # before training
     self.timer = edict(start=time.time(),it_mean=None)
-    self.ep = self.it = self.vis_it = 0
+    self.it = self.vis_it = 0
     self.graph.train()
     var = edict(idx=torch.arange(opt.batch_size))
     var.images = self.image_total
@@ -93,12 +106,13 @@ class Model():
     for _ in loader:
       # train iteration
       self.train_iteration(opt,var,loader)
+    os.system("ffmpeg -y -framerate 30 -i {}/%d.png -pix_fmt yuv420p {}".format(self.vis_path,self.video_fname))
 
   def predict_entire_image(self,opt):
     xy_grid = warp.get_normalized_pixel_grid(opt)[:1]
     rgb = self.graph.neural_image.forward(opt,xy_grid) # [B,HW,3]
     image = rgb.view(opt.H,opt.W,3).detach().cpu().permute(2,0,1).permute(1,2,0).numpy()
-    destination = opt.output_path+'/pred.png'
+    destination = "{}/{}.png".format(self.vis_path,self.vis_it)
     imageio.imwrite(destination, im=image)
 
 
